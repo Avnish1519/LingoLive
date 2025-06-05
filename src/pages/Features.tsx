@@ -206,7 +206,7 @@ const Features = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="text-center text-white">
-              <div className="text-4xl font-bold mb-2">< 200ms</div>
+              <div className="text-4xl font-bold mb-2">&lt; 200ms</div>
               <div className="text-blue-100">Translation Latency</div>
             </div>
             <div className="text-center text-white">

@@ -255,7 +255,7 @@ const Contact = () => {
               <div className="text-muted-foreground">Support Available</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-green-600 mb-2">< 4hrs</div>
+              <div className="text-4xl font-bold text-green-600 mb-2">&lt; 4hrs</div>
               <div className="text-muted-foreground">Average Response Time</div>
             </div>
             <div className="text-center">
