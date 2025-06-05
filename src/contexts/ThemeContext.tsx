@@ -18,6 +18,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     localStorage.setItem('theme', theme);
+    // Apply theme class to document element for global Tailwind dark mode
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 

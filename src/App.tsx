@@ -27,9 +27,9 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <SidebarProvider>
-            <div className="min-h-screen flex w-full bg-background">
+            <div className="min-h-screen flex w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
               <AppSidebar />
-              <SidebarInset>
+              <SidebarInset className="bg-white dark:bg-gray-900">
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/how-it-works" element={<HowItWorks />} />
