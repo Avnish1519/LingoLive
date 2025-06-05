@@ -32,9 +32,14 @@ import {
   Sparkles,
   BookOpen,
   Building,
-  GraduationCap
+  GraduationCap,
+  Brain,
+  Mail
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import PhraseOfTheDay from '@/components/PhraseOfTheDay';
+import OnboardingWizard from '@/components/OnboardingWizard';
+import MemoryPackModal from '@/components/MemoryPackModal';
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -44,6 +49,10 @@ const Dashboard = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [selectedCall, setSelectedCall] = useState<any>(null);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('onboardingCompleted');
+  });
+  const [showMemoryPack, setShowMemoryPack] = useState<any>(null);
   
   const recentCalls = [
     {
@@ -114,6 +123,14 @@ const Dashboard = () => {
       color: "from-green-500 to-teal-500",
       action: "View Summary",
       useCase: "Essential for business meetings and documentation"
+    },
+    {
+      title: "Memory Pack",
+      description: "Get post-call learning materials with vocabulary and cultural tips",
+      icon: Brain,
+      color: "from-orange-500 to-red-500",
+      action: "Generate Memory Pack",
+      useCase: "Helps you learn and reflect after each conversation"
     }
   ];
 
@@ -140,6 +157,15 @@ const Dashboard = () => {
       features: ["Real-time translation", "Meeting summaries", "Action items"]
     }
   ];
+
+  const completeOnboarding = () => {
+    localStorage.setItem('onboardingCompleted', 'true');
+    setShowOnboarding(false);
+    toast({
+      title: "Welcome to LingoLive!",
+      description: "Your personalized translation experience is ready.",
+    });
+  };
 
   const startCall = () => {
     setIsInCall(true);
@@ -181,13 +207,22 @@ const Dashboard = () => {
         const call = recentCalls.find(c => c.id === callId);
         setSelectedCall(call);
       }
+    } else if (feature === "memory pack") {
+      if (callId) {
+        const call = recentCalls.find(c => c.id === callId);
+        setShowMemoryPack(call);
+      }
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900">
+      {showOnboarding && <OnboardingWizard onComplete={completeOnboarding} />}
+      {showMemoryPack && <MemoryPackModal callData={showMemoryPack} onClose={() => setShowMemoryPack(null)} />}
+      <PhraseOfTheDay />
+
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-50">
+      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center space-x-2">
@@ -198,7 +233,7 @@ const Dashboard = () => {
             </Link>
             
             <div className="flex items-center space-x-4">
-              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
+              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200 dark:bg-green-900 dark:text-green-300">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
                 Online
               </Badge>
@@ -221,14 +256,14 @@ const Dashboard = () => {
           <div className="lg:col-span-2 space-y-6">
             {/* Welcome Section */}
             <div className="text-center mb-8">
-              <h1 className="text-4xl font-bold mb-4">Welcome back!</h1>
+              <h1 className="text-4xl font-bold mb-4 dark:text-white">Welcome back!</h1>
               <p className="text-xl text-muted-foreground">Ready to connect with the world?</p>
             </div>
 
             {/* Language Selection */}
-            <Card className="border-0 shadow-lg">
+            <Card className="border-0 shadow-lg dark:bg-gray-800">
               <CardHeader>
-                <CardTitle className="flex items-center">
+                <CardTitle className="flex items-center dark:text-white">
                   <Languages className="mr-2 h-5 w-5" />
                   Language Preferences
                 </CardTitle>
@@ -236,9 +271,9 @@ const Dashboard = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Your Language</label>
+                    <label className="text-sm font-medium mb-2 block dark:text-gray-300">Your Language</label>
                     <Select value={currentLanguage} onValueChange={setCurrentLanguage}>
-                      <SelectTrigger>
+                      <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -251,9 +286,9 @@ const Dashboard = () => {
                     </Select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Target Language</label>
+                    <label className="text-sm font-medium mb-2 block dark:text-gray-300">Target Language</label>
                     <Select value={targetLanguage} onValueChange={setTargetLanguage}>
-                      <SelectTrigger>
+                      <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -371,28 +406,28 @@ const Dashboard = () => {
             )}
 
             {/* Post-Call Features */}
-            <Card className="border-0 shadow-lg">
+            <Card className="border-0 shadow-lg dark:bg-gray-800">
               <CardHeader>
-                <CardTitle className="flex items-center">
+                <CardTitle className="flex items-center dark:text-white">
                   <Zap className="mr-2 h-5 w-5" />
                   Post-Call AI Features
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {postCallFeatures.map((feature, index) => (
-                    <Card key={index} className="card-hover border-0 shadow-md bg-gradient-to-br from-white to-gray-50">
+                    <Card key={index} className="card-hover border-0 shadow-md bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800">
                       <CardContent className="p-6 text-center">
                         <div className={`w-12 h-12 bg-gradient-to-r ${feature.color} rounded-lg flex items-center justify-center mx-auto mb-4`}>
                           <feature.icon className="h-6 w-6 text-white" />
                         </div>
-                        <h3 className="text-lg font-bold mb-2">{feature.title}</h3>
+                        <h3 className="text-lg font-bold mb-2 dark:text-white">{feature.title}</h3>
                         <p className="text-sm text-muted-foreground mb-3">{feature.description}</p>
-                        <p className="text-xs text-blue-600 mb-4">{feature.useCase}</p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mb-4">{feature.useCase}</p>
                         <Button 
                           size="sm" 
                           className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0"
-                          onClick={() => handlePostCallFeature(feature.title.toLowerCase().includes('dubbing') ? 'dubbing' : feature.title.toLowerCase().includes('rewind') ? 'rewind' : 'summary')}
+                          onClick={() => handlePostCallFeature(feature.title.toLowerCase().includes('dubbing') ? 'dubbing' : feature.title.toLowerCase().includes('rewind') ? 'rewind' : feature.title.toLowerCase().includes('memory') ? 'memory pack' : 'summary')}
                         >
                           {feature.action}
                         </Button>
@@ -444,7 +479,7 @@ const Dashboard = () => {
               <CardContent>
                 <div className="space-y-4">
                   {recentCalls.map((call) => (
-                    <Card key={call.id} className="bg-gradient-to-r from-gray-50 to-blue-50 border-0 shadow-sm">
+                    <Card key={call.id} className="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-700 dark:to-blue-900 border-0 shadow-sm">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center space-x-4">
@@ -452,12 +487,12 @@ const Dashboard = () => {
                               <AvatarFallback>{call.participant.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium">{call.participant}</p>
+                              <p className="font-medium dark:text-white">{call.participant}</p>
                               <p className="text-sm text-muted-foreground">{call.languages}</p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-medium">{call.duration}</p>
+                            <p className="text-sm font-medium dark:text-white">{call.duration}</p>
                             <p className="text-xs text-muted-foreground">{call.time}</p>
                           </div>
                         </div>
@@ -490,6 +525,15 @@ const Dashboard = () => {
                             >
                               <FileText className="h-3 w-3 mr-1" />
                               Summary
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs bg-gradient-to-r from-orange-500 to-red-500 text-white border-0"
+                              onClick={() => handlePostCallFeature('memory pack', call.id)}
+                            >
+                              <Brain className="h-3 w-3 mr-1" />
+                              Memory Pack
                             </Button>
                             <Button 
                               size="sm" 
