@@ -3,29 +3,18 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
-  Video, 
   Plus, 
   Settings, 
   Globe, 
   Users, 
-  Clock, 
   MessageSquare, 
-  Mic, 
-  MicOff,
-  VideoIcon,
-  VideoOff,
   LogOut,
   History,
   Languages,
-  Phone,
-  PhoneOff,
   Download,
-  Play,
-  Rewind,
   FileText,
   Headphones,
   Zap,
@@ -34,20 +23,19 @@ import {
   Building,
   GraduationCap,
   Brain,
-  Mail
+  Rewind
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import PhraseOfTheDay from '@/components/PhraseOfTheDay';
 import OnboardingWizard from '@/components/OnboardingWizard';
 import MemoryPackModal from '@/components/MemoryPackModal';
+import VideoCall from '@/components/VideoCall';
 
 const Dashboard = () => {
   const { toast } = useToast();
   const [currentLanguage, setCurrentLanguage] = useState('english');
   const [targetLanguage, setTargetLanguage] = useState('spanish');
-  const [isInCall, setIsInCall] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOn, setIsVideoOn] = useState(true);
+  const [showVideoCall, setShowVideoCall] = useState(false);
   const [selectedCall, setSelectedCall] = useState<any>(null);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('onboardingCompleted');
@@ -168,27 +156,19 @@ const Dashboard = () => {
   };
 
   const startCall = () => {
-    setIsInCall(true);
+    setShowVideoCall(true);
     toast({
-      title: "Call Started!",
+      title: "Starting WebRTC Call!",
       description: `Translation active: ${currentLanguage} ↔ ${targetLanguage}`,
     });
   };
 
   const endCall = () => {
-    setIsInCall(false);
+    setShowVideoCall(false);
     toast({
       title: "Call Ended",
-      description: "Translation session saved to history with recording available.",
+      description: "Translation session saved to history.",
     });
-  };
-
-  const joinCall = (callId: string) => {
-    toast({
-      title: "Joining Call",
-      description: `Connecting to call ${callId}...`,
-    });
-    setIsInCall(true);
   };
 
   const handlePostCallFeature = (feature: string, callId?: number) => {
@@ -304,103 +284,21 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Call Interface */}
-            {!isInCall ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="border-0 shadow-lg card-hover">
-                  <CardContent className="p-8 text-center">
-                    <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Video className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-4">Start New Call</h3>
-                    <p className="text-muted-foreground mb-6">Begin a new translated video call</p>
-                    <Button onClick={startCall} className="w-full lingo-gradient text-white border-0">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Start Call
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-0 shadow-lg card-hover">
-                  <CardContent className="p-8 text-center">
-                    <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Users className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-4">Join Call</h3>
-                    <p className="text-muted-foreground mb-4">Enter a call ID to join</p>
-                    <div className="space-y-4">
-                      <Input placeholder="Enter call ID" />
-                      <Button onClick={() => joinCall("ABC123")} variant="outline" className="w-full">
-                        Join Call
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+            {/* Video Call Interface */}
+            {showVideoCall ? (
+              <VideoCall onCallEnd={endCall} />
             ) : (
-              <Card className="border-0 shadow-xl">
-                <CardContent className="p-8">
-                  <div className="text-center mb-6">
-                    <Badge className="lingo-gradient text-white mb-4">
-                      <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
-                      Live Translation Active
-                    </Badge>
-                    <h3 className="text-xl font-bold">
-                      {currentLanguage.charAt(0).toUpperCase() + currentLanguage.slice(1)} ↔ {targetLanguage.charAt(0).toUpperCase() + targetLanguage.slice(1)}
-                    </h3>
+              <Card className="border-0 shadow-lg card-hover">
+                <CardContent className="p-8 text-center">
+                  <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Globe className="h-8 w-8 text-white" />
                   </div>
-
-                  {/* Mock Video Interface */}
-                  <div className="bg-gray-900 rounded-lg p-8 mb-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div className="aspect-video bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                        <div className="text-center text-white">
-                          <VideoIcon className="h-12 w-12 mx-auto mb-2 opacity-70" />
-                          <p className="text-sm">You</p>
-                        </div>
-                      </div>
-                      <div className="aspect-video bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                        <div className="text-center text-white">
-                          <VideoIcon className="h-12 w-12 mx-auto mb-2 opacity-70" />
-                          <p className="text-sm">Remote</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Live Translation Display */}
-                    <div className="bg-black/50 text-white p-4 rounded-lg mb-4">
-                      <div className="space-y-2">
-                        <p className="text-sm opacity-75">You: "Hello, how are you today?"</p>
-                        <p className="text-sm text-blue-300">→ "Hola, ¿cómo estás hoy?"</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Call Controls */}
-                  <div className="flex justify-center space-x-4">
-                    <Button
-                      variant={isMuted ? "destructive" : "outline"}
-                      size="icon"
-                      onClick={() => setIsMuted(!isMuted)}
-                    >
-                      {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                      variant={!isVideoOn ? "destructive" : "outline"}
-                      size="icon"
-                      onClick={() => setIsVideoOn(!isVideoOn)}
-                    >
-                      {isVideoOn ? <VideoIcon className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={endCall}
-                      className="px-6"
-                    >
-                      <PhoneOff className="mr-2 h-4 w-4" />
-                      End Call
-                    </Button>
-                  </div>
+                  <h3 className="text-xl font-bold mb-4">Start WebRTC Video Call</h3>
+                  <p className="text-muted-foreground mb-6">Begin a new real-time translated video call with WebRTC</p>
+                  <Button onClick={startCall} className="w-full lingo-gradient text-white border-0">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Start Call
+                  </Button>
                 </CardContent>
               </Card>
             )}
