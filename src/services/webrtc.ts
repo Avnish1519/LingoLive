@@ -75,6 +75,7 @@ export class WebRTCService {
 
   async createCall(): Promise<string> {
     try {
+      // Create new call document with auto-generated ID
       const callDoc = doc(collection(firestore, 'calls'));
       const offerCandidates = collection(callDoc, 'offerCandidates');
       const answerCandidates = collection(callDoc, 'answerCandidates');
@@ -100,6 +101,7 @@ export class WebRTCService {
         type: offerDescription.type,
       };
 
+      // Save offer to Firestore
       await setDoc(callDoc, { offer });
       console.log('Offer saved to Firestore');
 
@@ -148,7 +150,7 @@ export class WebRTCService {
         }
       };
 
-      // Get the call document
+      // Get the call document and offer
       const callSnapshot = await getDoc(callDoc);
       const callData = callSnapshot.data();
       
