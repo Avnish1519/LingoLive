@@ -4,12 +4,12 @@ import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 
 const firebaseConfig = {
   // Replace with your actual Firebase config
-  apiKey: "your-api-key",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "your-app-id"
+VITE_FIREBASE_API_KEY=AIzaSyD7bLOTNFclVoyhCt9qjrHOmYXEt9EMbws
+VITE_FIREBASE_AUTH_DOMAIN=lingolive-c98a2.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=lingolive-c98a2
+VITE_FIREBASE_STORAGE_BUCKET=lingolive-c98a2.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=1091546521669
+VITE_FIREBASE_APP_ID=1:1091546521669:web:d63fccae36bda39809c32c
 };
 
 // Initialize Firebase
