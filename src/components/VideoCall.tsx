@@ -23,13 +23,18 @@ interface VideoCallProps {
   onCallEnd: () => void;
 }
 
+interface CallDetails {
+  id: string;
+  password: string;
+}
+
 type ConnectionState = 'idle' | 'starting' | 'connecting' | 'connected' | 'failed';
 
 const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const [webrtc] = useState(() => new WebRTCService());
-  const [callId, setCallId] = useState('');
+  const [webRTC] = useState(() => new WebRTCService());
+  const [callDetails, setCallDetails] = useState<CallDetails | null>(null);
   const [inputCallId, setInputCallId] = useState('');
   const [isInCall, setIsInCall] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -40,21 +45,10 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set up video refs when streams are available
-    if (localVideoRef.current && webrtc.localStream) {
-      localVideoRef.current.srcObject = webrtc.localStream;
-      console.log('📹 Local video stream attached');
-    }
-    
-    if (remoteVideoRef.current && webrtc.remoteStream) {
-      remoteVideoRef.current.srcObject = webrtc.remoteStream;
-      console.log('📹 Remote video stream attached');
-    }
-
     // Monitor connection state
     const checkConnectionState = () => {
-      const state = webrtc.pc.connectionState;
-      const iceState = webrtc.pc.iceConnectionState;
+      const state = webRTC.pc.connectionState;
+      const iceState = webRTC.pc.iceConnectionState;
       console.log('🔗 WebRTC states - Connection:', state, 'ICE:', iceState);
       
       if (state === 'connecting' || iceState === 'checking') {
@@ -74,78 +68,69 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
       }
     };
 
-    webrtc.pc.onconnectionstatechange = checkConnectionState;
-    webrtc.pc.oniceconnectionstatechange = checkConnectionState;
+    webRTC.pc.onconnectionstatechange = checkConnectionState;
+    webRTC.pc.oniceconnectionstatechange = checkConnectionState;
 
     // Monitor remote stream changes
-    const originalOnTrack = webrtc.pc.ontrack;
-    webrtc.pc.ontrack = (event) => {
+    webRTC.pc.ontrack = (event) => {
       console.log('🎵 Remote track received:', event.track.kind);
-      if (originalOnTrack) originalOnTrack(event);
+      event.streams[0].getTracks().forEach((track) => {
+        console.log('🎵 Adding track to remote stream:', track.kind);
+        webRTC.remoteStream?.addTrack(track);
+      });
       
       // Update remote video when new tracks arrive
-      if (remoteVideoRef.current && webrtc.remoteStream) {
-        remoteVideoRef.current.srcObject = webrtc.remoteStream;
+      if (remoteVideoRef.current && webRTC.remoteStream) {
+        remoteVideoRef.current.srcObject = webRTC.remoteStream;
+        console.log('📹 Remote video stream attached to DOM');
       }
     };
 
     return () => {
-      webrtc.pc.onconnectionstatechange = null;
-      webrtc.pc.oniceconnectionstatechange = null;
+      webRTC.pc.onconnectionstatechange = null;
+      webRTC.pc.oniceconnectionstatechange = null;
     };
-  }, [webrtc, toast]);
+  }, [webRTC, toast]);
 
-  const startWebcam = async () => {
+  // Monitor remote stream updates
+  useEffect(() => {
+    if (remoteVideoRef.current && webRTC.remoteStream) {
+      remoteVideoRef.current.srcObject = webRTC.remoteStream;
+      console.log('📹 Remote video stream updated in DOM');
+    }
+  }, [webRTC.remoteStream]);
+
+  const startCall = async () => {
     try {
       setConnectionState('starting');
       setError(null);
-      console.log('🎬 Starting webcam...');
+      console.log('🎬 Starting new call...');
       
-      const stream = await webrtc.startWebcam();
+      // Start webcam
+      const localStream = await webRTC.startWebcam();
       if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
+        localVideoRef.current.srcObject = localStream;
         console.log('📹 Local video attached to DOM');
       }
       setWebcamStarted(true);
-      setConnectionState('idle');
-      toast({
-        title: "Webcam Started 📹",
-        description: "Your camera and microphone are now active.",
-      });
-    } catch (error) {
-      console.error('❌ Webcam error:', error);
-      setConnectionState('failed');
-      setError('Failed to access camera and microphone. Please check permissions.');
-      toast({
-        title: "Camera Error ❌",
-        description: "Failed to access camera and microphone. Please check permissions.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const createCall = async () => {
-    try {
-      if (!webcamStarted) {
-        await startWebcam();
-      }
       
       setConnectionState('connecting');
-      setError(null);
-      console.log('📞 Creating call...');
       
-      const id = await webrtc.createCall();
-      setCallId(id);
+      // Create call
+      const callId = await webRTC.createCall();
+      const password = Math.random().toString(36).slice(-6); // Generate 6-digit password
+      
+      setCallDetails({ id: callId, password });
       setIsInCall(true);
       
-      console.log('✅ Call created with ID:', id);
+      console.log('✅ Call created with ID:', callId, 'Password:', password);
       toast({
         title: "Call Created! 🆔",
-        description: `Call ID: ${id}. Share this ID with the person you want to call.`,
+        description: `Call ID: ${callId}. Share this ID with the person you want to call.`,
         duration: 5000,
       });
     } catch (error) {
-      console.error('❌ Create call error:', error);
+      console.error('❌ Start call error:', error);
       setConnectionState('failed');
       setError('Failed to create call. Please try again.');
       toast({
@@ -156,8 +141,8 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
     }
   };
 
-  const answerCall = async () => {
-    if (!inputCallId.trim()) {
+  const joinCall = async (callId: string) => {
+    if (!callId.trim()) {
       toast({
         title: "Error ❌",
         description: "Please enter a valid call ID.",
@@ -167,25 +152,33 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
     }
 
     try {
-      if (!webcamStarted) {
-        await startWebcam();
+      setConnectionState('starting');
+      setError(null);
+      console.log('🎬 Starting webcam for joining call...');
+      
+      // Start webcam
+      const localStream = await webRTC.startWebcam();
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = localStream;
+        console.log('📹 Local video attached to DOM');
       }
+      setWebcamStarted(true);
 
       setConnectionState('connecting');
-      setError(null);
-      console.log('📞 Joining call:', inputCallId.trim());
+      console.log('📞 Joining call:', callId.trim());
       
-      await webrtc.answerCall(inputCallId.trim());
-      setCallId(inputCallId.trim());
+      // Answer call
+      await webRTC.answerCall(callId.trim());
+      setCallDetails({ id: callId.trim(), password: '' });
       setIsInCall(true);
       
       console.log('✅ Successfully joined call');
       toast({
         title: "Joined Call! 🎉",
-        description: `Connected to call ${inputCallId}`,
+        description: `Connected to call ${callId}`,
       });
     } catch (error) {
-      console.error('❌ Answer call error:', error);
+      console.error('❌ Join call error:', error);
       setConnectionState('failed');
       setError('Failed to join call. Please check the call ID and try again.');
       toast({
@@ -199,9 +192,9 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
   const hangUp = () => {
     try {
       console.log('📴 Ending call...');
-      webrtc.hangUp();
+      webRTC.hangUp();
       setIsInCall(false);
-      setCallId('');
+      setCallDetails(null);
       setInputCallId('');
       setWebcamStarted(false);
       setConnectionState('idle');
@@ -231,8 +224,8 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
   };
 
   const toggleMute = () => {
-    if (webrtc.localStream) {
-      const audioTrack = webrtc.localStream.getAudioTracks()[0];
+    if (webRTC.localStream) {
+      const audioTrack = webRTC.localStream.getAudioTracks()[0];
       if (audioTrack) {
         audioTrack.enabled = isMuted;
         setIsMuted(!isMuted);
@@ -246,8 +239,8 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
   };
 
   const toggleVideo = () => {
-    if (webrtc.localStream) {
-      const videoTrack = webrtc.localStream.getVideoTracks()[0];
+    if (webRTC.localStream) {
+      const videoTrack = webRTC.localStream.getVideoTracks()[0];
       if (videoTrack) {
         videoTrack.enabled = !isVideoOn;
         setIsVideoOn(!isVideoOn);
@@ -261,11 +254,13 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
   };
 
   const copyCallId = () => {
-    navigator.clipboard.writeText(callId);
-    toast({
-      title: "Copied! 📋",
-      description: "Call ID copied to clipboard.",
-    });
+    if (callDetails?.id) {
+      navigator.clipboard.writeText(callDetails.id);
+      toast({
+        title: "Copied! 📋",
+        description: "Call ID copied to clipboard.",
+      });
+    }
   };
 
   const getConnectionStatusBadge = () => {
@@ -333,7 +328,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
             </CardHeader>
             <CardContent className="space-y-4">
               <Button 
-                onClick={createCall} 
+                onClick={startCall} 
                 disabled={connectionState === 'starting' || connectionState === 'connecting'}
                 className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white"
               >
@@ -343,23 +338,9 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
                     Creating...
                   </>
                 ) : (
-                  'Create Call'
+                  'Start Call'
                 )}
               </Button>
-              {callId && (
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Share this Call ID:</p>
-                  <div className="flex gap-2">
-                    <Input value={callId} readOnly className="font-mono text-sm" />
-                    <Button onClick={copyCallId} size="icon" variant="outline">
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <p className="text-xs text-green-600">
-                    ✅ Call created! Waiting for someone to join...
-                  </p>
-                </div>
-              )}
             </CardContent>
           </Card>
 
@@ -378,7 +359,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
                 className="font-mono"
               />
               <Button 
-                onClick={answerCall} 
+                onClick={() => joinCall(inputCallId)} 
                 disabled={connectionState === 'starting' || connectionState === 'connecting' || !inputCallId.trim()}
                 variant="outline" 
                 className="w-full"
@@ -464,10 +445,22 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
               </Button>
             </div>
 
-            {callId && (
+            {callDetails && (
               <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                <p className="text-xs text-gray-600 mb-1">Call ID:</p>
-                <p className="font-mono text-sm break-all">{callId}</p>
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-xs text-gray-600">Call ID:</p>
+                  <Button onClick={copyCallId} size="sm" variant="outline">
+                    <Copy className="h-3 w-3 mr-1" />
+                    Copy
+                  </Button>
+                </div>
+                <p className="font-mono text-sm break-all">{callDetails.id}</p>
+                {callDetails.password && (
+                  <>
+                    <p className="text-xs text-gray-600 mt-2 mb-1">Password:</p>
+                    <p className="font-mono text-sm">{callDetails.password}</p>
+                  </>
+                )}
               </div>
             )}
           </CardContent>
