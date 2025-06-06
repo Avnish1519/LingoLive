@@ -43,40 +43,51 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
     // Set up video refs when streams are available
     if (localVideoRef.current && webrtc.localStream) {
       localVideoRef.current.srcObject = webrtc.localStream;
+      console.log('📹 Local video stream attached');
     }
     
     if (remoteVideoRef.current && webrtc.remoteStream) {
       remoteVideoRef.current.srcObject = webrtc.remoteStream;
+      console.log('📹 Remote video stream attached');
     }
 
     // Monitor connection state
     const checkConnectionState = () => {
       const state = webrtc.pc.connectionState;
-      console.log('WebRTC connection state:', state);
+      const iceState = webrtc.pc.iceConnectionState;
+      console.log('🔗 WebRTC states - Connection:', state, 'ICE:', iceState);
       
-      switch (state) {
-        case 'connecting':
-          setConnectionState('connecting');
-          break;
-        case 'connected':
-          setConnectionState('connected');
-          toast({
-            title: "Call Connected!",
-            description: "You are now connected to your peer.",
-          });
-          break;
-        case 'failed':
-        case 'disconnected':
-          setConnectionState('failed');
-          setError('Connection failed. Please try again.');
-          break;
-        default:
-          break;
+      if (state === 'connecting' || iceState === 'checking') {
+        setConnectionState('connecting');
+      } else if (state === 'connected' || iceState === 'connected') {
+        setConnectionState('connected');
+        toast({
+          title: "Call Connected! 🎉",
+          description: "You are now connected to your peer.",
+        });
+      } else if (state === 'failed' || iceState === 'failed') {
+        setConnectionState('failed');
+        setError('Connection failed. Please check your internet connection and try again.');
+      } else if (state === 'disconnected' || iceState === 'disconnected') {
+        setConnectionState('failed');
+        setError('Connection lost. Please try reconnecting.');
       }
     };
 
     webrtc.pc.onconnectionstatechange = checkConnectionState;
     webrtc.pc.oniceconnectionstatechange = checkConnectionState;
+
+    // Monitor remote stream changes
+    const originalOnTrack = webrtc.pc.ontrack;
+    webrtc.pc.ontrack = (event) => {
+      console.log('🎵 Remote track received:', event.track.kind);
+      if (originalOnTrack) originalOnTrack(event);
+      
+      // Update remote video when new tracks arrive
+      if (remoteVideoRef.current && webrtc.remoteStream) {
+        remoteVideoRef.current.srcObject = webrtc.remoteStream;
+      }
+    };
 
     return () => {
       webrtc.pc.onconnectionstatechange = null;
@@ -88,22 +99,25 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
     try {
       setConnectionState('starting');
       setError(null);
+      console.log('🎬 Starting webcam...');
+      
       const stream = await webrtc.startWebcam();
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+        console.log('📹 Local video attached to DOM');
       }
       setWebcamStarted(true);
       setConnectionState('idle');
       toast({
-        title: "Webcam Started",
+        title: "Webcam Started 📹",
         description: "Your camera and microphone are now active.",
       });
     } catch (error) {
-      console.error('Webcam error:', error);
+      console.error('❌ Webcam error:', error);
       setConnectionState('failed');
       setError('Failed to access camera and microphone. Please check permissions.');
       toast({
-        title: "Camera Error",
+        title: "Camera Error ❌",
         description: "Failed to access camera and microphone. Please check permissions.",
         variant: "destructive",
       });
@@ -118,20 +132,24 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
       
       setConnectionState('connecting');
       setError(null);
+      console.log('📞 Creating call...');
+      
       const id = await webrtc.createCall();
       setCallId(id);
       setIsInCall(true);
       
+      console.log('✅ Call created with ID:', id);
       toast({
-        title: "Call Created Successfully!",
+        title: "Call Created! 🆔",
         description: `Call ID: ${id}. Share this ID with the person you want to call.`,
+        duration: 5000,
       });
     } catch (error) {
-      console.error('Create call error:', error);
+      console.error('❌ Create call error:', error);
       setConnectionState('failed');
       setError('Failed to create call. Please try again.');
       toast({
-        title: "Error",
+        title: "Error ❌",
         description: "Failed to create call. Please check your internet connection.",
         variant: "destructive",
       });
@@ -141,7 +159,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
   const answerCall = async () => {
     if (!inputCallId.trim()) {
       toast({
-        title: "Error",
+        title: "Error ❌",
         description: "Please enter a valid call ID.",
         variant: "destructive",
       });
@@ -155,20 +173,23 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
 
       setConnectionState('connecting');
       setError(null);
+      console.log('📞 Joining call:', inputCallId.trim());
+      
       await webrtc.answerCall(inputCallId.trim());
       setCallId(inputCallId.trim());
       setIsInCall(true);
       
+      console.log('✅ Successfully joined call');
       toast({
-        title: "Joined Call Successfully!",
+        title: "Joined Call! 🎉",
         description: `Connected to call ${inputCallId}`,
       });
     } catch (error) {
-      console.error('Answer call error:', error);
+      console.error('❌ Answer call error:', error);
       setConnectionState('failed');
       setError('Failed to join call. Please check the call ID and try again.');
       toast({
-        title: "Error",
+        title: "Error ❌",
         description: "Failed to join call. Please check the call ID and your internet connection.",
         variant: "destructive",
       });
@@ -177,6 +198,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
 
   const hangUp = () => {
     try {
+      console.log('📴 Ending call...');
       webrtc.hangUp();
       setIsInCall(false);
       setCallId('');
@@ -195,13 +217,13 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
       
       onCallEnd();
       toast({
-        title: "Call Ended",
+        title: "Call Ended 📴",
         description: "You have left the call.",
       });
     } catch (error) {
-      console.error('Hang up error:', error);
+      console.error('❌ Hang up error:', error);
       toast({
-        title: "Error",
+        title: "Error ❌",
         description: "Error ending call.",
         variant: "destructive",
       });
@@ -214,8 +236,9 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
       if (audioTrack) {
         audioTrack.enabled = isMuted;
         setIsMuted(!isMuted);
+        console.log('🎤 Audio', isMuted ? 'unmuted' : 'muted');
         toast({
-          title: isMuted ? "Unmuted" : "Muted",
+          title: isMuted ? "Unmuted 🎤" : "Muted 🔇",
           description: isMuted ? "Your microphone is now on." : "Your microphone is now off.",
         });
       }
@@ -228,8 +251,9 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
       if (videoTrack) {
         videoTrack.enabled = !isVideoOn;
         setIsVideoOn(!isVideoOn);
+        console.log('📹 Video', !isVideoOn ? 'enabled' : 'disabled');
         toast({
-          title: isVideoOn ? "Video Off" : "Video On",
+          title: isVideoOn ? "Video Off 📹" : "Video On 🎥",
           description: isVideoOn ? "Your camera is now off." : "Your camera is now on.",
         });
       }
@@ -239,7 +263,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
   const copyCallId = () => {
     navigator.clipboard.writeText(callId);
     toast({
-      title: "Copied!",
+      title: "Copied! 📋",
       description: "Call ID copied to clipboard.",
     });
   };
@@ -250,7 +274,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
         return (
           <Badge variant="secondary" className="bg-blue-100 text-blue-700">
             <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-            Starting...
+            Starting Camera...
           </Badge>
         );
       case 'connecting':
@@ -406,7 +430,9 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
                   <div className="absolute inset-0 bg-gray-900 rounded-lg flex items-center justify-center">
                     <div className="text-center text-gray-400">
                       <Users className="h-8 w-8 mx-auto mb-2" />
-                      <p className="text-sm">Waiting for peer...</p>
+                      <p className="text-sm">
+                        {connectionState === 'connecting' ? 'Connecting...' : 'Waiting for peer...'}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -441,7 +467,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ onCallEnd }) => {
             {callId && (
               <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                 <p className="text-xs text-gray-600 mb-1">Call ID:</p>
-                <p className="font-mono text-sm">{callId}</p>
+                <p className="font-mono text-sm break-all">{callId}</p>
               </div>
             )}
           </CardContent>
